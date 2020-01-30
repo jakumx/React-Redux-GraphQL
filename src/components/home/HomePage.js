@@ -1,46 +1,44 @@
-import React, { useState, useEffect } from 'react'
+import React from 'react'
 import Card from '../card/Card'
 import styles from './home.module.css'
-import axios from 'axios'
+import { connect } from 'react-redux'
+import { removeCharacterAction, addToFavoritesAction } from '../../redux/charsDuck'
 
-let URL = "https://rickandmortyapi.com/api"
+function Home({ characters, addToFavoritesAction, removeCharacterAction }) {
 
-export default function Home() {
-
-    let [chars, setChars] = useState([])
-
-    useEffect(() => {
-        getCharacters()
-    }, [])
-
-    function nextChar() {
-        chars.shift()
-        if (!chars.length) {
-            //get more characters
-        }
-        setChars([...chars])
-    }
-
-    function renderCharacter() {
-        let char = chars[0]
-        return (
-            <Card leftClick={nextChar} {...char} />
-        )
-    }
-
-    function getCharacters() {
-        return axios.get(`${URL}/character`)
-            .then(res => {
-                setChars(res.data.results)
-            })
-    }
-
+  function renderCharacter() {
+    const character = characters[0]
     return (
-        <div className={styles.container}>
-            <h2>Personajes de Rick y Morty</h2>
-            <div>
-                {renderCharacter()}
-            </div>
-        </div>
+      <Card
+        rightClick={addFav}
+        leftClick={nextCharacter}
+        {...character}
+      />
     )
+  }
+
+  function nextCharacter() {
+    removeCharacterAction()
+  }
+
+  function addFav(){
+    addToFavoritesAction()
+  } 
+
+  return (
+      <div className={styles.container}>
+          <h2>Personajes de Rick y Morty</h2>
+          <div>
+              {renderCharacter()}
+          </div>
+      </div>
+  )
 }
+
+function mapState(state) {
+  return {
+    characters : state.characters.characters
+  }
+}
+
+export default connect(mapState, { addToFavoritesAction, removeCharacterAction })(Home)

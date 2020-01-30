@@ -1,14 +1,18 @@
-import axios from 'axios'
 import { updateDB, getFavorites } from '../firebase'
-
+import ApolloClient, { gql } from 'apollo-boost'
 // constant
 const initialData = {
   fetching: false,
   characters: [],
   character: {},
-  favorites: []
+  favorites: [],
+  nextPage: 1
 }
-const URL = 'https://rickandmortyapi.com/api/character'
+
+const client = new ApolloClient({
+  uri: 'https://rickandmortyapi.com/graphql'
+})
+const UPDATE_PAGE = 'UPDATE_PAGE'
 const GET_CHARACTERS = 'GET_CHARACTERS'
 const GET_CHARACTERS_SUCCESS = 'GET_CHARACTERS_SUCCESS'
 const GET_CHARACTERS_ERROR = 'GET_CHARACTERS_ERROR'
@@ -38,7 +42,9 @@ export default function reducer(state = initialData, action) {
       return { ...state, favorites: action.payload, fetching: false }
     case GET_FAVS_ERROR:
       return { ...state, fetching: false, error: action.payload }
-    default:
+    case UPDATE_PAGE:
+      return { ...state, nextPage: action.payload }
+    default: 
       return state
   }
 }
@@ -79,26 +85,56 @@ export const addToFavoritesAction = () => (dispatch, getState) => {
 export const removeCharacterAction = () => (dispatch, getState) => {
   let { characters } = getState().characters
   characters.shift()
+  if (!characters.length) {
+    getCharactersAction()(dispatch, getState)
+    return
+  }
   dispatch({
     type: REMOVE_CHARACTER,
     payload: [...characters]
   })
 }
 
-export const getCharactersAction = () => (dispatch, _getState) => {
+export const getCharactersAction = () => (dispatch, getState) => {
+  const query = gql`
+    query ($page:Int) {
+      characters(page:$page) {
+        info {
+          pages
+          next
+          prev
+        }
+        results {
+          name
+          image
+        }
+      }
+    }
+  `
   dispatch({
     type: GET_CHARACTERS
   })
-  return axios.get(URL).then(response => {
+
+  const { nextPage } = getState().characters
+  
+  return client.query({
+    query,
+    variables: { page: nextPage }
+  }).then(({data, error}) => {
+    if (error) {
+      dispatch({
+        type: GET_CHARACTERS_ERROR,
+        payload: error
+      })
+      return
+    }
     dispatch({
       type: GET_CHARACTERS_SUCCESS,
-      payload: response.data.results
+      payload: data.characters.results
     })
-  }).catch(error => {
     dispatch({
-      type: GET_CHARACTERS_ERROR,
-      payload: error.response
+      type: UPDATE_PAGE,
+      payload: data.characters.info.next ? data.characters.info.next : 1
     })
   })
-
 }

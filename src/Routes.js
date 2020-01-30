@@ -1,6 +1,7 @@
 import React from 'react'
 import { Switch, Route, Redirect } from 'react-router-dom'
 import Home from './components/home/HomePage'
+// import GrapHome from './components/home/GraphHome'
 import FavPage from './components/favs/FavPage'
 import LoginPage from './components/login/LoginPage'
 
